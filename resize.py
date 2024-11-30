@@ -18,7 +18,7 @@ def show_seam(img: np.ndarray, seam):
     plt.show()
 
 # Remove a seam from img
-@jit
+# @jit
 def remove(img: np.ndarray, seam) -> np.ndarray:
     h, w = img.shape[:2]
     ret_img = np.zeros((h, w-1, 3), np.int32)
@@ -32,17 +32,20 @@ def remove(img: np.ndarray, seam) -> np.ndarray:
 @jit 
 def find_seam(energy_map: np.ndarray) -> np.ndarray:
     h, w = energy_map.shape
-    dp = np.zeros((h, w))
-
+    dp = np.zeros((h, w), dtype=np.int64)
+    prev = np.zeros((h, w, 2))
     dp[0, :] = energy_map[0, :]
     for i in range(1, h):
         for j in range(0, w):
+            y = -1
             if(j == 0):
-                dp[i, j] = min(dp[i-1, j], dp[i-1, j+1]) + energy_map[i, j]
+                y = np.argmin(dp[i-1, j:j+2]) + j
             elif(j==w-1):
-                dp[i, j] = min(dp[i-1, j-1], dp[i-1, j]) + energy_map[i, j]
+                y = np.argmin(dp[i-1, j-1:j+1]) + j-1
             else:
-                dp[i, j] = min(dp[i-1, j-1], min(dp[i-1, j], dp[i-1, j+1])) + energy_map[i, j]
+                y = np.argmin(dp[i-1, j-1:j+2]) + j-1
+            dp[i, j] = dp[i-1, y] + energy_map[i, j]
+            prev[i, j] = [i-1, y]
 
     y_s = np.argmin(dp[h-1, :])
     seam = np.zeros((h, 2), dtype=np.int32)
@@ -50,16 +53,7 @@ def find_seam(energy_map: np.ndarray) -> np.ndarray:
     for i in range(h-2, -1, -1):
         x = seam[i+1][0]
         y = seam[i+1][1]
-        if(y != 0 and dp[x, y] == dp[x-1, y-1] + energy_map[x, y]):
-            seam[i] = [x-1, y-1]
-            # print("haha")
-        elif(dp[x, y] == dp[x-1, y] + energy_map[x, y]):
-            seam[i] = [x-1, y]
-        elif(y != w-1 and dp[x, y] == dp[x-1, y+1] + energy_map[x, y]):
-            seam[i] = [x-1, y+1]
-        else:
-            print("Something wrong when compute dp")
-            assert(1 == 0)
+        seam[i] = prev[x, y]
     return seam
 
 
@@ -67,8 +61,8 @@ def compute_energyMap(f: np.ndarray, g: np.ndarray):
 
     dx = ndi.convolve1d(f, g, axis=0, mode='mirror').sum(axis=2)
     dy = ndi.convolve1d(f, g, axis=1, mode='mirror').sum(axis=2)
-
-    return np.abs(dx) + np.abs(dy)
+    ret = np.array(np.abs(dx) + np.abs(dy), dtype=np.int64)
+    return ret
 
     
 
