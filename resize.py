@@ -6,13 +6,25 @@ import cv2
 import matplotlib.pyplot as plt
 import time
 
+def show_seam(img: np.ndarray, seam):
+    h, w = img.shape[:2]
+    
+    for Si in seam:
+        (x, y) = Si
+        img[x, y, :] = [255, 0, 0]
+    
+    plt.imshow(img)
+    plt.axis(False)
+    plt.show()
+
 # Remove a seam from img
 @jit
 def remove(img: np.ndarray, seam) -> np.ndarray:
-    h, w, c = img.shape
-    ret_img = np.zeros((h, w-1, 3))
+    h, w = img.shape[:2]
+    ret_img = np.zeros((h, w-1, 3), np.int32)
     for i in range(h):
         m = seam[i][1]
+        # print(m)
         ret_img[i, :m] = img[i, :m]
         ret_img[i, m:] = img[i, m+1:]
     return ret_img 
@@ -36,14 +48,15 @@ def find_seam(energy_map: np.ndarray) -> np.ndarray:
     seam = np.zeros((h, 2), dtype=np.int32)
     seam[-1] = [h-1, y_s]
     for i in range(h-2, -1, -1):
-        x, y = seam[-1]
-        # print(f"(x,y) = {x, y}")
-        if(dp[x, y] == dp[x-1, y-1] + energy_map[x, y]):
+        x = seam[i+1][0]
+        y = seam[i+1][1]
+        if(y != 0 and dp[x, y] == dp[x-1, y-1] + energy_map[x, y]):
             seam[i] = [x-1, y-1]
+            # print("haha")
         elif(dp[x, y] == dp[x-1, y] + energy_map[x, y]):
-            seam[i] = [x-1, y-1]
-        elif(dp[x, y] == dp[x-1, y+1] + energy_map[x, y]):
-            seam[i] = [x-1, y-1]
+            seam[i] = [x-1, y]
+        elif(y != w-1 and dp[x, y] == dp[x-1, y+1] + energy_map[x, y]):
+            seam[i] = [x-1, y+1]
         else:
             print("Something wrong when compute dp")
             assert(1 == 0)
