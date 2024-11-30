@@ -4,6 +4,17 @@ from numba import jit
 import cv2 as cv
 import argparse
 import matplotlib.pyplot as plt
+import time
+
+def update_mask(mask: np.ndarray[np.bool_], seam):
+    h, w = mask.shape[:2]
+    ret = np.zeros((h, w-1, 3), np.bool_)
+    for i in range(h):
+        m = seam[i][1]
+        # print(m)
+        ret[i, :m] = mask[i, :m]
+        ret[i, m:] = mask[i, m+1:]
+    return ret
 
 def main():
     arg = argparse.ArgumentParser()
@@ -17,18 +28,14 @@ def main():
     mask = np.array(cv.imread(mask_path))
     mask = np.where(mask==0, False, True)
     f = np.array([1, -2, 1])
-    
-    while(np.isin(mask, 0).any()):
-        print(np.max(img))
+    start_t = time.time()
+    while(np.isin(mask, False).any()):
         energyMap = compute_energyMap(img, f)
-        
-        energyMap = np.where(mask[:, :, 0] == False, 1e-3, energyMap)
+        energyMap[mask[:, :, 0] == False] = -1e6
         seam = find_seam(energyMap)
-        # show_seam(img, seam)
-        mask = remove(img=mask, seam=seam)
+        mask = update_mask(mask=mask, seam=seam)
         img = remove(img=img, seam=seam)
-        # print(f"img shape = {img.shape}")
-    
+    print('Time used: {} sec'.format(time.time()-start_t))
     fig, axes = plt.subplots(2, 1, figsize = (9, 10))
     axes[0].imshow(origin)
     axes[0].axis(False)
@@ -38,6 +45,11 @@ def main():
     axes[1].set_title('After removed object')
     plt.tight_layout()
     plt.show()
+    name = img_path.split("/")[1]
+    output_path = "out/" + name; 
+    img = img.astype(np.uint8)
+    img = cv.cvtColor(img, cv.COLOR_RGB2BGR)
+    cv.imwrite(output_path, img)
 
 
 if __name__ == "__main__":
