@@ -60,30 +60,33 @@ def compute_energyMap(f: np.ndarray, g: np.ndarray):
     return ret
 
 
-def compute_forward_energy(I: np.ndarray):
+@jit 
+def get_forward_seam(I: np.ndarray, mask: np.ndarray = None):
     I = I.sum(axis=2, dtype=np.int64)
     h, w = I.shape
-    M = np.zeros((h, w))
-
-    L = np.roll(I, 1, axis=1)
-    R = np.roll(I, -1, axis=1)
-    U = np.roll(I, 1, axis=0)
-
-    CU = np.abs(R - L)
-    CL = np.abs(U - L) + CU
-    CR = np.abs(U - R) + CU
-    
-    energy = np.zeros((h, w))
+    M = np.zeros((h, w), np.int64)
+    prev = np.zeros((h, w), dtype=np.int32)
     for i in range(1, h):
-        mL = np.roll(M[i-1], 1)
-        mR = np.roll(M[i-1], -1)
-        costs = np.array([CL[i], CU[i], CR[i]])
-        sum_M = np.array([mL, M[i-1], mR]) + costs
-        mins = np.argmin(sum_M, axis=0)
-        energy[i] = np.choose(mins, costs)
-        M[i] = np.choose(mins, costs)
-    return energy
-
+        for j in range(w):
+            l = max(0, j-1)
+            r = min(w-1, j+1)
+            cU = np.abs(I[i, r] - I[i, l])
+            costs = np.array([np.abs(I[i-1, j] - I[i, l])+cU, cU, np.abs(I[i-1,j] - I[i, r])+cU], np.int64)
+            sum_M = np.array([M[i-1, l], M[i-1, j], M[i-1, r]], np.int64) + costs
+            idx = np.argmin(sum_M)
+            if mask is not None:
+                p = -1e6 if not mask[i, j, 0] else 0
+            else:
+                p = 0
+            
+            M[i, j] = sum_M[idx] + p
+            pos = np.array([l, j, r])
+            prev[i, j] = pos[idx]
+    seams = np.zeros(h, np.int32)
+    seams[-1] = np.argmin(M[h-1, :])
+    for i in range(h-2, -1, -1):
+        seams[i] = prev[i+1, seams[i+1]]
+    return seams
 
 
 def delete_vertical(img: np.ndarray):
@@ -95,6 +98,7 @@ def delete_vertical(img: np.ndarray):
     assert(energy_map.shape == img.shape[:2])
 
     seam = find_seam(energy_map=energy_map)
+    # seam = get_forward_seam(img)
     ret = remove(img=img, seam=seam)
     return ret
 
