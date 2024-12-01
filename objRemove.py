@@ -1,4 +1,4 @@
-from resize import find_seam, compute_energyMap, remove, show_seam, compute_forward_energy
+from resize import find_seam, compute_energyMap, remove, show_seam, get_forward_seam
 import numpy as np
 from numba import jit
 import cv2 as cv
@@ -20,8 +20,9 @@ def main():
     arg = argparse.ArgumentParser()
     arg.add_argument("-mask", help="Path to mask",required=True)
     arg.add_argument("-image", help="Path to image", required=True)
+    arg.add_argument("-forward", action="store_true", help="Use forward energy")
     args = vars(arg.parse_args())
-    mask_path, img_path = args["mask"], args["image"]
+    mask_path, img_path, forward = args["mask"], args["image"], args["forward"]
     img = cv.imread(img_path)
     img = cv.cvtColor(img, cv.COLOR_BGR2RGB)
     origin = img
@@ -30,10 +31,12 @@ def main():
     f = np.array([1, -2, 1])
     start_t = time.time()
     while(np.isin(mask, False).any()):
-        # energyMap = compute_energyMap(img, f)
-        energyMap = compute_forward_energy(img)
-        energyMap[mask[:, :, 0] == False] = -1e6
-        seam = find_seam(energyMap)
+        if forward:
+            seam = get_forward_seam(img, mask)
+        else:
+            energyMap = compute_energyMap(img, f)
+            energyMap[mask[:, :, 0] == False] = -1e6
+            seam = find_seam(energyMap)
         # show_seam(img, seam)
         mask = update_mask(mask=mask, seam=seam)
         img = remove(img=img, seam=seam)
