@@ -11,41 +11,72 @@ def calculate_energy(image):
     energy = np.abs(sobel_x) + np.abs(sobel_y)
     return energy
 
-def add_seam(image, seam):
-    """插入單條接縫"""
+
+def add_seams(image, seams):
+    """Add multiple seams to the image based on the provided list of seams."""
     rows, cols, channels = image.shape
-    enlarged = np.zeros((rows, cols + 1, channels), dtype=image.dtype)
+    enlarged = np.zeros((rows, cols + len(seams), channels), dtype=image.dtype)
+    
     for i in range(rows):
-        col = seam[i, 1]
-        for ch in range(channels):
-            if col == 0:
-                new_pixel = image[i, col, ch]
-            else:
-                # 確保使用高精度類型進行運算，並避免溢出
-                new_pixel = (int(image[i, col - 1, ch]) + int(image[i, col, ch])) // 2
-                new_pixel = np.clip(new_pixel, 0, 255)  # 防止轉回 uint8 時溢出
-            enlarged[i, :col, ch] = image[i, :col, ch]
-            enlarged[i, col, ch] = new_pixel
-            enlarged[i, col + 1:, ch] = image[i, col:, ch]
+        # Sort seams for this row to maintain the correct order of duplication
+        sorted_seams = sorted(seams, key=lambda x: x[i])
+        col_offset = 0
+        for j in range(cols):
+            enlarged[i, j + col_offset] = image[i, j]
+            while col_offset < len(sorted_seams) and sorted_seams[col_offset][i] == j:
+                # Duplicate the seam pixel by averaging with its neighbors
+                for ch in range(channels):
+                    if j == 0:
+                        enlarged[i, j + col_offset + 1, ch] = (image[i, j, ch].astype(np.int32) + image[i, j + 1, ch].astype(np.int32)) // 2
+                    elif j == cols - 1:
+                        enlarged[i, j + col_offset + 1, ch] = (image[i, j - 1, ch].astype(np.int32) + image[i, j, ch].astype(np.int32)) // 2
+                    else:
+                        enlarged[i, j + col_offset + 1, ch] = (image[i, j - 1, ch].astype(np.int32) + image[i, j, ch].astype(np.int32)) // 2
+                col_offset += 1
+    
     return enlarged
 
+def find_multiple_seams(image, num_seams):
+    """Find multiple seams for removal simultaneously."""
+    seams = []
+    temp_image = image.copy()
+    for _ in range(num_seams):
+        energy_map = calculate_energy(temp_image)
+        seam = find_seam(energy_map)
+        seams.append(seam)
+        # Remove the seam from the temporary image to avoid selecting the same seam repeatedly
+        temp_image = remove_seam(temp_image, seam)
+    return seams
+
+def remove_seam(image, seam):
+    """Remove a single seam from the image."""
+    rows, cols, channels = image.shape
+    reduced = np.zeros((rows, cols - 1, channels), dtype=image.dtype)
+    
+    for i in range(rows):
+        col = seam[i]
+        reduced[i, :col] = image[i, :col]
+        reduced[i, col:] = image[i, col + 1:]
+    
+    return reduced
 
 def enlarge_image(image, scale_factor):
-    """放大圖像，根據比例計算需要插入的接縫數"""
+    """Enlarge the image by finding and duplicating multiple seams."""
     rows, cols, _ = image.shape
     target_cols = int(cols * scale_factor)
     num_seams = target_cols - cols
 
-    for _ in range(num_seams):
-        energy_map = calculate_energy(image)
-        seam = find_seam(energy_map)
-        image = add_seam(image, seam)
+    # Find multiple seams for removal
+    seams = find_multiple_seams(image, num_seams)
+    
+    # Add the seams back to enlarge the image
+    enlarged_image = add_seams(image, seams)
 
-    return image
+    return enlarged_image
 
 start_time = time.time()
 # 測試
-image = cv2.imread('image/cat.jpg')  # 載入圖像
+image = cv2.imread('image/dolphin.jpg')  # 載入圖像
 scale_factor = 1.5  # 放大比例
 enlarged_image = enlarge_image(image, scale_factor)
 print('Elapsed time: %.2f seconds' % (time.time() - start_time))
