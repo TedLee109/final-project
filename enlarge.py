@@ -65,11 +65,10 @@ def remove_seam(image, seam):
     
     return reduced
 
-def enlarge_image(image, scale_factor):
+def enlarge_image(image, num_seams):
     """Enlarge the image by finding and duplicating multiple seams."""
     rows, cols, _ = image.shape
-    target_cols = int(cols * scale_factor)
-    num_seams = target_cols - cols
+    target_cols = int(cols + num_seams)
 
     # Find multiple seams for removal
     seams = find_multiple_seams(image, num_seams)
@@ -79,11 +78,11 @@ def enlarge_image(image, scale_factor):
 
     return enlarged_image
 
-start_time = time.time()
-# 測試
-image = cv2.imread('image/beach.jpg')  # 載入圖像
-scale_factor = 1.5  # 放大比例
-enlarged_image = enlarge_image(image, scale_factor)
-print('Elapsed time: %.2f seconds' % (time.time() - start_time))
-# 保存結果
-cv2.imwrite('out/enlarged_image.jpg', enlarged_image)
+# start_time = time.time()
+# # 測試
+# image = cv2.imread('image/beach.jpg')  # 載入圖像
+# num_seams = 300  # 放大比例
+# enlarged_image = enlarge_image(image, num_seams)
+# print('Elapsed time: %.2f seconds' % (time.time() - start_time))
+# # 保存結果
+# cv2.imwrite('out/enlarged_image.jpg', enlarged_image)

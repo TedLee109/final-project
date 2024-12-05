@@ -5,7 +5,7 @@ from scipy import ndimage as ndi
 import cv2
 import matplotlib.pyplot as plt
 import time
-from skimage import color
+import argparse
 
 def show_seam(img: np.ndarray, seam):
     h, w = img.shape[:2]
@@ -89,16 +89,14 @@ def get_forward_seam(I: np.ndarray, mask: np.ndarray = None):
     return seams
 
 
-def delete_vertical(img: np.ndarray):
+def delete_vertical(img: np.ndarray, forward: bool):
 
     f = np.array([1, -2, 1])
-
-    energy_map = compute_energyMap(img, f)
-    # energy_map = compute_forward_energy(img)
-    assert(energy_map.shape == img.shape[:2])
-
-    seam = find_seam(energy_map=energy_map)
-    # seam = get_forward_seam(img)
+    if forward:
+        seam = get_forward_seam(img)
+    else :
+        energy_map = compute_energyMap(img, f)
+        seam = find_seam(energy_map=energy_map)
     ret = remove(img=img, seam=seam)
     return ret
 
@@ -106,35 +104,20 @@ def delete_horizontal(img: np.ndarray):
     img = np.transpose(img, (1, 0, 2))
     ret = delete_vertical(img)
     return np.transpose(ret, (1, 0, 2))
-def resize_image(img: np.ndarray, delete_height: int, delete_width: int):
+
+def resize_image(img: np.ndarray, delete_height: int, delete_width: int, forward: bool):
     h, w, _ = img.shape
     resized_img = img
     while delete_height > 0 or delete_width > 0:
         if delete_height > 0 and (delete_width == 0 or delete_height >= delete_width):
-            resized_img = delete_horizontal(resized_img)
+            resized_img = delete_horizontal(resized_img, forward)
             delete_height -= 1
         elif delete_width > 0:
-            resized_img = delete_vertical(resized_img)
+            resized_img = delete_vertical(resized_img, forward)
             delete_width -= 1
     return resized_img
 
-def main():
-    start_time = time.time()
-#<<<<<<< 133
-    img = cv2.imread('image/bench3.jpg')
-    numOfDelete_H = 200
-    numOfDelete_W = 200
-# =======
-#     img = cv2.imread('image/bench3.png')
-#     numOfDelete = 200
-# >>>>>>> master
-    origin_img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-    img = origin_img
-    # for i in range(numOfDelete):
-    #     # print(f"img[50, 10:20] = {img[50, 10:20]}")
-    #     img = delete_vertical(img)
-    img = resize_image(origin_img, numOfDelete_H, numOfDelete_W)
-    print('Time used: {} sec'.format(time.time()-start_time))
+def show_result(origin_img, img):
     img = np.int32(img)
     fig, axes = plt.subplots(2, 1, figsize = (9, 10))
     axes[0].imshow(origin_img)
@@ -142,17 +125,6 @@ def main():
     axes[0].set_title('origin image')
     axes[1].imshow(img)
     axes[1].axis(False)
-    axes[1].set_title(f"Result of H :{numOfDelete_H} W :{numOfDelete_W} deletion")
+    axes[1].set_title(f"Result")
     plt.tight_layout()
     plt.show()
-    img = img.astype(np.uint8)
-    img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
-#<<<<<<< 133
-    cv2.imwrite("out/bench3_resize_HighAndWidth.jpg", img)
-# =======
-#     cv2.imwrite("out/bench3_backward.jpg", img)
-# >>>>>>> master
-
-if __name__ == "__main__":
-    main()
-
