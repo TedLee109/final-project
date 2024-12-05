@@ -11,15 +11,20 @@ def calculate_energy(image):
     energy = np.abs(sobel_x) + np.abs(sobel_y)
     return energy
 
-
 def add_seams(image, seams):
     """Add multiple seams to the image based on the provided list of seams."""
     rows, cols, channels = image.shape
     enlarged = np.zeros((rows, cols + len(seams), channels), dtype=image.dtype)
+
+    new_seams = np.array([seams.pop()])
+    print(f"new_seams.shape {new_seams.shape} | seams.shape = {seams[0].shape}")
+    for s in reversed(seams): 
+        new_seams[np.where(new_seams >= s)] += 1
+        new_seams = np.append(new_seams, s.reshape((1, -1)), axis=0) 
     
     for i in range(rows):
         # Sort seams for this row to maintain the correct order of duplication
-        sorted_seams = sorted(seams, key=lambda x: x[i])
+        sorted_seams = sorted(new_seams, key=lambda x: x[i])
         col_offset = 0
         for j in range(cols):
             enlarged[i, j + col_offset] = image[i, j]
@@ -76,9 +81,9 @@ def enlarge_image(image, scale_factor):
 
 start_time = time.time()
 # 測試
-image = cv2.imread('image/dolphin.jpg')  # 載入圖像
+image = cv2.imread('image/beach.jpg')  # 載入圖像
 scale_factor = 1.5  # 放大比例
 enlarged_image = enlarge_image(image, scale_factor)
 print('Elapsed time: %.2f seconds' % (time.time() - start_time))
 # 保存結果
-cv2.imwrite('enlarged_image.jpg', enlarged_image)
+cv2.imwrite('out/enlarged_image.jpg', enlarged_image)
