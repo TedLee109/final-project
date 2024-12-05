@@ -120,9 +120,14 @@ def resize_image(img: np.ndarray, delete_height: int, delete_width: int):
 
 def main():
     start_time = time.time()
-    img = cv2.imread('image/cat.jpg')
-    numOfDelete_H = 500
-    numOfDelete_W = 500
+#<<<<<<< 133
+    img = cv2.imread('image/bench3.jpg')
+    numOfDelete_H = 200
+    numOfDelete_W = 200
+# =======
+#     img = cv2.imread('image/bench3.png')
+#     numOfDelete = 200
+# >>>>>>> master
     origin_img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     img = origin_img
     # for i in range(numOfDelete):
@@ -142,7 +147,11 @@ def main():
     plt.show()
     img = img.astype(np.uint8)
     img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
-    cv2.imwrite("out/cat_resize_HighAndWidth.jpg", img)
+#<<<<<<< 133
+    cv2.imwrite("out/bench3_resize_HighAndWidth.jpg", img)
+# =======
+#     cv2.imwrite("out/bench3_backward.jpg", img)
+# >>>>>>> master
 
 if __name__ == "__main__":
     main()
