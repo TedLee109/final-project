@@ -6,6 +6,7 @@ import cv2
 import matplotlib.pyplot as plt
 import time
 import argparse
+from tqdm import tqdm
 
 def show_seam(img: np.ndarray, seam):
     h, w = img.shape[:2]
@@ -51,6 +52,26 @@ def find_seam(energy_map: np.ndarray) -> np.ndarray:
         seam[i] = prev[i+1, seam[i+1]]
     return seam
 
+@jit 
+def find_seam_energy(energy_map: np.ndarray) -> np.ndarray:
+    h, w = energy_map.shape
+    dp = np.zeros((h, w), dtype=np.int64)
+    prev = np.zeros((h, w))
+    dp[0, :] = energy_map[0, :]
+    for i in range(1, h):
+        for j in range(0, w):
+            l = max(0, j-1)
+            r = min(w-1, j+1)
+            y = np.argmin(dp[i-1, l:r+1]) + l
+            dp[i, j] = dp[i-1, y] + energy_map[i, j]
+            prev[i, j] = y
+
+    y_s = np.argmin(dp[h-1, :])
+    seam = np.zeros(h, dtype=np.int32)
+    seam[-1] = y_s
+    for i in range(h-2, -1, -1):
+        seam[i] = prev[i+1, seam[i+1]]
+    return seam, np.min(dp[h-1])
 
 def compute_energyMap(f: np.ndarray, g: np.ndarray):
 
@@ -100,9 +121,9 @@ def delete_vertical(img: np.ndarray, forward: bool):
     ret = remove(img=img, seam=seam)
     return ret
 
-def delete_horizontal(img: np.ndarray):
+def delete_horizontal(img: np.ndarray, forward):
     img = np.transpose(img, (1, 0, 2))
-    ret = delete_vertical(img)
+    ret = delete_vertical(img, forward)
     return np.transpose(ret, (1, 0, 2))
 
 def resize_image(img: np.ndarray, delete_height: int, delete_width: int, forward: bool):
@@ -116,6 +137,41 @@ def resize_image(img: np.ndarray, delete_height: int, delete_width: int, forward
             resized_img = delete_vertical(resized_img, forward)
             delete_width -= 1
     return resized_img
+
+def reszie_by_transport(img: np.ndarray, delete_height: int, delete_width: int, forward: bool):
+    h, w, _ = img.shape
+    transportMap = np.zeros((h, w,))
+    tmp_images = [None] * delete_height
+    g = np.array([1, -2, 1])
+    for i in tqdm(range(delete_width)):
+        for j in range(delete_height):
+            if i == 0 and j == 0:
+                tmp_images[j] = img
+                continue; 
+            elif i == 0:
+                horizontal = compute_energyMap(tmp_images[j-1], g)
+                hor_seam, hor_e = find_seam_energy(horizontal)
+                tmp_images[j] = remove(tmp_images[j-1], hor_seam)
+                transportMap[i, j] = transportMap[i, j-1] + hor_e
+                continue
+            elif j == 0:
+                vertical = compute_energyMap(tmp_images[j], g)
+                ver_seam, ver_e = find_seam_energy(vertical)
+                tmp_images[j] = remove(tmp_images[j], ver_seam)
+                transportMap[i, j] = transportMap[i-1, j] + ver_e
+                continue
+
+            vertical = compute_energyMap(tmp_images[j], g)
+            horizontal = compute_energyMap(tmp_images[j-1], g)
+            ver_seam, ver_e = find_seam_energy(vertical)
+            hor_seam, hor_e = find_seam_energy(horizontal)
+            transportMap[i, j] = min(transportMap[i-1, j]+ver_e, transportMap[i, j-1]+hor_e)
+            if transportMap[i-1, j]+ver_e < transportMap[i, j-1]+hor_e:
+                tmp_images[j] = remove(tmp_images[j], ver_seam)
+            else:
+                tmp_images[j] = remove(tmp_images[j-1], hor_seam)
+    return tmp_images[delete_height - 1]
+
 
 def show_result(origin_img, img):
     img = np.int32(img)

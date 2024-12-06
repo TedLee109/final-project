@@ -17,7 +17,6 @@ def add_seams(image, seams):
     enlarged = np.zeros((rows, cols + len(seams), channels), dtype=image.dtype)
 
     new_seams = np.array([seams.pop()])
-    print(f"new_seams.shape {new_seams.shape} | seams.shape = {seams[0].shape}")
     for s in reversed(seams): 
         new_seams[np.where(new_seams >= s)] += 1
         new_seams = np.append(new_seams, s.reshape((1, -1)), axis=0) 
@@ -67,22 +66,14 @@ def remove_seam(image, seam):
 
 def enlarge_image(image, num_seams):
     """Enlarge the image by finding and duplicating multiple seams."""
-    rows, cols, _ = image.shape
-    target_cols = int(cols + num_seams)
 
     # Find multiple seams for removal
+    start = time.time()
     seams = find_multiple_seams(image, num_seams)
-    
+    print('Time used: {} sec to find multiple seams'.format(time.time() - start))
+    start = time.time()
     # Add the seams back to enlarge the image
     enlarged_image = add_seams(image, seams)
+    print('Time used: {} sec to add seams'.format(time.time() - start))
 
     return enlarged_image
-
-# start_time = time.time()
-# # 測試
-# image = cv2.imread('image/beach.jpg')  # 載入圖像
-# num_seams = 300  # 放大比例
-# enlarged_image = enlarge_image(image, num_seams)
-# print('Elapsed time: %.2f seconds' % (time.time() - start_time))
-# # 保存結果
-# cv2.imwrite('out/enlarged_image.jpg', enlarged_image)

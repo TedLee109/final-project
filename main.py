@@ -2,7 +2,7 @@ import numpy as np
 import time
 import argparse
 import cv2
-from resize import resize_image
+from resize import resize_image, reszie_by_transport
 from enlarge import enlarge_image
 from objRemove import obj_remove
 
@@ -43,6 +43,7 @@ def main():
     if args.resize:
         start_time = time.time()
         img = resize_image(origin_img, numOfDelete_H, numOfDelete_W, args.forward)
+        # img = reszie_by_transport(origin_img, numOfDelete_H, numOfDelete_W, args.forward)
         print('Time used: {} sec'.format(time.time() - start_time))
     if args.enlarge:
         start_time = time.time()
