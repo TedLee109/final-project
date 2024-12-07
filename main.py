@@ -38,6 +38,7 @@ def main():
         mask = None
 
     origin_img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    print(origin_img.shape)
     img = origin_img
 
     if args.resize:

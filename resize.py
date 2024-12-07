@@ -9,12 +9,12 @@ import argparse
 from tqdm import tqdm
 
 def show_seam(img: np.ndarray, seams):
-    h, w = img.shape[:2]
+
     for seam in seams:
         for x, Si in enumerate(seam):
             y = Si
             img[x, y, :] = [255, 0, 0]
-    
+
     plt.imshow(img)
     plt.axis(False)
     plt.show()
