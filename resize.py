@@ -8,12 +8,12 @@ import time
 import argparse
 from tqdm import tqdm
 
-def show_seam(img: np.ndarray, seam):
+def show_seam(img: np.ndarray, seams):
     h, w = img.shape[:2]
-    
-    for x, Si in enumerate(seam):
-        y = Si
-        img[x, y, :] = [255, 0, 0]
+    for seam in seams:
+        for x, Si in enumerate(seam):
+            y = Si
+            img[x, y, :] = [255, 0, 0]
     
     plt.imshow(img)
     plt.axis(False)
@@ -23,7 +23,7 @@ def show_seam(img: np.ndarray, seam):
 # @jit
 def remove(img: np.ndarray, seam) -> np.ndarray:
     h, w = img.shape[:2]
-    ret_img = np.zeros((h, w-1, 3), np.int32)
+    ret_img = np.zeros((h, w-1, 3), dtype=img.dtype)
     for i in range(h):
         m = seam[i]
         # print(m)
@@ -73,13 +73,26 @@ def find_seam_energy(energy_map: np.ndarray) -> np.ndarray:
         seam[i] = prev[i+1, seam[i+1]]
     return seam, np.min(dp[h-1])
 
-def compute_energyMap(f: np.ndarray, g: np.ndarray):
+def calculate_energy(image):
+    """計算圖像的能量圖，對每個色彩通道計算梯度幅值並合併"""
+    
+    channels = cv2.split(image)
+    
+    energy = np.zeros(image.shape[:2], dtype=np.float64)
+    
+    for channel in channels:
+        sobel_x = cv2.Sobel(channel, cv2.CV_64F, 1, 0, ksize=3)
+        sobel_y = cv2.Sobel(channel, cv2.CV_64F, 0, 1, ksize=3)
+        energy += np.abs(sobel_x) + np.abs(sobel_y)
+    
+    return energy
 
-    dx = ndi.convolve1d(f, g, axis=0, mode='mirror').sum(axis=2)
-    dy = ndi.convolve1d(f, g, axis=1, mode='mirror').sum(axis=2)
-    ret = np.array(np.abs(dx) + np.abs(dy), dtype=np.int64)
+def compute_energyMap(f: np.ndarray, g: np.ndarray = np.array([-1, 0, 1])):
+
+    dx = ndi.convolve1d(f, g, axis=0, mode='mirror')
+    dy = ndi.convolve1d(f, g, axis=1, mode='mirror')
+    ret = np.sqrt(np.sum(dx ** 2, axis=2) + np.sum(dy ** 2, axis=2))
     return ret
-
 
 @jit 
 def get_forward_seam(I: np.ndarray, mask: np.ndarray = None):
@@ -111,12 +124,12 @@ def get_forward_seam(I: np.ndarray, mask: np.ndarray = None):
 
 
 def delete_vertical(img: np.ndarray, forward: bool):
-
-    f = np.array([1, -2, 1])
+    
+    temp_image = img.copy()
     if forward:
         seam = get_forward_seam(img)
     else :
-        energy_map = compute_energyMap(img, f)
+        energy_map = compute_energyMap(temp_image)
         seam = find_seam(energy_map=energy_map)
     ret = remove(img=img, seam=seam)
     return ret
