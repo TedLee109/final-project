@@ -1,15 +1,7 @@
 import cv2
 import time
 import numpy as np
-from resize import find_seam
-
-def calculate_energy(image):
-    """計算圖像的能量圖，使用 Sobel 算子計算梯度幅值"""
-    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    sobel_x = cv2.Sobel(gray, cv2.CV_64F, 1, 0, ksize=3)
-    sobel_y = cv2.Sobel(gray, cv2.CV_64F, 0, 1, ksize=3)
-    energy = np.abs(sobel_x) + np.abs(sobel_y)
-    return energy
+from resize import find_seam, show_seam, calculate_energy, compute_energyMap
 
 def add_seams(image, seams):
     """Add multiple seams to the image based on the provided list of seams."""
@@ -17,10 +9,11 @@ def add_seams(image, seams):
     enlarged = np.zeros((rows, cols + len(seams), channels), dtype=image.dtype)
 
     new_seams = np.array([seams.pop()])
+    
     for s in reversed(seams): 
         new_seams[np.where(new_seams >= s)] += 1
         new_seams = np.append(new_seams, s.reshape((1, -1)), axis=0) 
-    
+    # show_seam(image, new_seams)
     for i in range(rows):
         # Sort seams for this row to maintain the correct order of duplication
         sorted_seams = sorted(new_seams, key=lambda x: x[i])
@@ -45,7 +38,7 @@ def find_multiple_seams(image, num_seams):
     seams = []
     temp_image = image.copy()
     for _ in range(num_seams):
-        energy_map = calculate_energy(temp_image)
+        energy_map = compute_energyMap(temp_image)
         seam = find_seam(energy_map)
         seams.append(seam)
         # Remove the seam from the temporary image to avoid selecting the same seam repeatedly
@@ -66,14 +59,20 @@ def remove_seam(image, seam):
 
 def enlarge_image(image, num_seams):
     """Enlarge the image by finding and duplicating multiple seams."""
-
+    h, w, c = image.shape
+    threshold = int(np.floor(w * 0.2))
     # Find multiple seams for removal
-    start = time.time()
-    seams = find_multiple_seams(image, num_seams)
-    print('Time used: {} sec to find multiple seams'.format(time.time() - start))
-    start = time.time()
-    # Add the seams back to enlarge the image
-    enlarged_image = add_seams(image, seams)
-    print('Time used: {} sec to add seams'.format(time.time() - start))
+    
+    while num_seams > 0:
+        start = time.time()
+        x = min(threshold, num_seams)
+        seams = find_multiple_seams(image, x)
+        print('Time used: {} sec to find multiple seams'.format(time.time() - start))
+        start = time.time()
+        # Add the seams back to enlarge the image
+        enlarged_img= add_seams(image, seams)
+        image = enlarged_img
+        print('Time used: {} sec to add seams'.format(time.time() - start))
+        num_seams -= threshold
 
-    return enlarged_image
+    return enlarged_img
