@@ -42,8 +42,8 @@ def main():
 
     if args.resize:
         start_time = time.time()
-        # img = resize_image(origin_img, numOfDelete_H, numOfDelete_W, args.forward)
-        img = reszie_by_transport(origin_img, numOfDelete_H, numOfDelete_W, args.forward)
+        img = resize_image(origin_img, numOfDelete_H, numOfDelete_W, args.forward)
+        # img = reszie_by_transport(origin_img, numOfDelete_H, numOfDelete_W, args.forward)
         print('Time used: {} sec'.format(time.time() - start_time))
     if args.enlarge:
         start_time = time.time()
