@@ -36,8 +36,18 @@ def find_seam(energy_map: np.ndarray) -> np.ndarray:
     h, w = energy_map.shape
     dp = np.zeros((h, w), dtype=np.int64)
     prev = np.zeros((h, w))
+    S = np.arange(-1, w-1)
     dp[0, :] = energy_map[0, :]
     for i in range(1, h):
+        # row = dp[i-1]
+        # L = np.roll(row, 1)
+        # L[0] = 1e8
+        # R = np.roll(row, -1)
+        # R[w-1] = 1e8
+        # LUR = np.array([L, row, R])
+        # idxs = np.argmin(LUR, axis=0)
+        # dp[i] = np.choose(idxs, LUR) + energy_map[i]
+        # prev[i] = idxs + S
         for j in range(0, w):
             l = max(0, j-1)
             r = min(w-1, j+1)

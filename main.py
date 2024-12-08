@@ -38,13 +38,12 @@ def main():
         mask = None
 
     origin_img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-    print(origin_img.shape)
     img = origin_img
 
     if args.resize:
         start_time = time.time()
-        img = resize_image(origin_img, numOfDelete_H, numOfDelete_W, args.forward)
-        # img = reszie_by_transport(origin_img, numOfDelete_H, numOfDelete_W, args.forward)
+        # img = resize_image(origin_img, numOfDelete_H, numOfDelete_W, args.forward)
+        img = reszie_by_transport(origin_img, numOfDelete_H, numOfDelete_W, args.forward)
         print('Time used: {} sec'.format(time.time() - start_time))
     if args.enlarge:
         start_time = time.time()
