@@ -165,27 +165,26 @@ def reszie_by_transport(img: np.ndarray, delete_height: int, delete_width: int, 
     h, w, _ = img.shape
     transportMap = np.zeros((h, w,))
     tmp_images = [None] * delete_height
-    g = np.array([1, -2, 1])
     for i in tqdm(range(delete_width)):
         for j in range(delete_height):
             if i == 0 and j == 0:
                 tmp_images[j] = img
                 continue; 
             elif i == 0:
-                horizontal = compute_energyMap(tmp_images[j-1], g)
+                horizontal = compute_energyMap(tmp_images[j-1])
                 hor_seam, hor_e = find_seam_energy(horizontal)
                 tmp_images[j] = remove(tmp_images[j-1], hor_seam)
                 transportMap[i, j] = transportMap[i, j-1] + hor_e
                 continue
             elif j == 0:
-                vertical = compute_energyMap(tmp_images[j], g)
+                vertical = compute_energyMap(tmp_images[j])
                 ver_seam, ver_e = find_seam_energy(vertical)
                 tmp_images[j] = remove(tmp_images[j], ver_seam)
                 transportMap[i, j] = transportMap[i-1, j] + ver_e
                 continue
 
-            vertical = compute_energyMap(tmp_images[j], g)
-            horizontal = compute_energyMap(tmp_images[j-1], g)
+            vertical = compute_energyMap(tmp_images[j])
+            horizontal = compute_energyMap(tmp_images[j-1])
             ver_seam, ver_e = find_seam_energy(vertical)
             hor_seam, hor_e = find_seam_energy(horizontal)
             transportMap[i, j] = min(transportMap[i-1, j]+ver_e, transportMap[i, j-1]+hor_e)
