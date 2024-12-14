@@ -8,13 +8,13 @@ import time
 import argparse
 from tqdm import tqdm
 
-def show_seam(img: np.ndarray, seam):
-    h, w = img.shape[:2]
-    
-    for x, Si in enumerate(seam):
-        y = Si
-        img[x, y, :] = [255, 0, 0]
-    
+def show_seam(img: np.ndarray, seams):
+
+    for seam in seams:
+        for x, Si in enumerate(seam):
+            y = Si
+            img[x, y, :] = [255, 0, 0]
+
     plt.imshow(img)
     plt.axis(False)
     plt.show()
@@ -23,7 +23,7 @@ def show_seam(img: np.ndarray, seam):
 # @jit
 def remove(img: np.ndarray, seam) -> np.ndarray:
     h, w = img.shape[:2]
-    ret_img = np.zeros((h, w-1, 3), np.int32)
+    ret_img = np.zeros((h, w-1, 3), dtype=img.dtype)
     for i in range(h):
         m = seam[i]
         # print(m)
@@ -36,8 +36,18 @@ def find_seam(energy_map: np.ndarray) -> np.ndarray:
     h, w = energy_map.shape
     dp = np.zeros((h, w), dtype=np.int64)
     prev = np.zeros((h, w))
+    S = np.arange(-1, w-1)
     dp[0, :] = energy_map[0, :]
     for i in range(1, h):
+        # row = dp[i-1]
+        # L = np.roll(row, 1)
+        # L[0] = 1e8
+        # R = np.roll(row, -1)
+        # R[w-1] = 1e8
+        # LUR = np.array([L, row, R])
+        # idxs = np.argmin(LUR, axis=0)
+        # dp[i] = np.choose(idxs, LUR) + energy_map[i]
+        # prev[i] = idxs + S
         for j in range(0, w):
             l = max(0, j-1)
             r = min(w-1, j+1)
@@ -73,13 +83,26 @@ def find_seam_energy(energy_map: np.ndarray) -> np.ndarray:
         seam[i] = prev[i+1, seam[i+1]]
     return seam, np.min(dp[h-1])
 
-def compute_energyMap(f: np.ndarray, g: np.ndarray):
+def calculate_energy(image):
+    """計算圖像的能量圖，對每個色彩通道計算梯度幅值並合併"""
+    
+    channels = cv2.split(image)
+    
+    energy = np.zeros(image.shape[:2], dtype=np.float64)
+    
+    for channel in channels:
+        sobel_x = cv2.Sobel(channel, cv2.CV_64F, 1, 0, ksize=3)
+        sobel_y = cv2.Sobel(channel, cv2.CV_64F, 0, 1, ksize=3)
+        energy += np.abs(sobel_x) + np.abs(sobel_y)
+    
+    return energy
 
-    dx = ndi.convolve1d(f, g, axis=0, mode='mirror').sum(axis=2)
-    dy = ndi.convolve1d(f, g, axis=1, mode='mirror').sum(axis=2)
-    ret = np.array(np.abs(dx) + np.abs(dy), dtype=np.int64)
+def compute_energyMap(f: np.ndarray, g: np.ndarray = np.array([-1, 0, 1])):
+
+    dx = ndi.convolve1d(f, g, axis=0, mode='mirror')
+    dy = ndi.convolve1d(f, g, axis=1, mode='mirror')
+    ret = np.sqrt(np.sum(dx ** 2, axis=2) + np.sum(dy ** 2, axis=2))
     return ret
-
 
 @jit 
 def get_forward_seam(I: np.ndarray, mask: np.ndarray = None):
@@ -111,12 +134,12 @@ def get_forward_seam(I: np.ndarray, mask: np.ndarray = None):
 
 
 def delete_vertical(img: np.ndarray, forward: bool):
-
-    f = np.array([1, -2, 1])
+    
+    temp_image = img.copy()
     if forward:
         seam = get_forward_seam(img)
     else :
-        energy_map = compute_energyMap(img, f)
+        energy_map = compute_energyMap(temp_image)
         seam = find_seam(energy_map=energy_map)
     ret = remove(img=img, seam=seam)
     return ret
@@ -142,27 +165,26 @@ def reszie_by_transport(img: np.ndarray, delete_height: int, delete_width: int, 
     h, w, _ = img.shape
     transportMap = np.zeros((h, w,))
     tmp_images = [None] * delete_height
-    g = np.array([1, -2, 1])
     for i in tqdm(range(delete_width)):
         for j in range(delete_height):
             if i == 0 and j == 0:
                 tmp_images[j] = img
                 continue; 
             elif i == 0:
-                horizontal = compute_energyMap(tmp_images[j-1], g)
+                horizontal = compute_energyMap(tmp_images[j-1])
                 hor_seam, hor_e = find_seam_energy(horizontal)
                 tmp_images[j] = remove(tmp_images[j-1], hor_seam)
                 transportMap[i, j] = transportMap[i, j-1] + hor_e
                 continue
             elif j == 0:
-                vertical = compute_energyMap(tmp_images[j], g)
+                vertical = compute_energyMap(tmp_images[j])
                 ver_seam, ver_e = find_seam_energy(vertical)
                 tmp_images[j] = remove(tmp_images[j], ver_seam)
                 transportMap[i, j] = transportMap[i-1, j] + ver_e
                 continue
 
-            vertical = compute_energyMap(tmp_images[j], g)
-            horizontal = compute_energyMap(tmp_images[j-1], g)
+            vertical = compute_energyMap(tmp_images[j])
+            horizontal = compute_energyMap(tmp_images[j-1])
             ver_seam, ver_e = find_seam_energy(vertical)
             hor_seam, hor_e = find_seam_energy(horizontal)
             transportMap[i, j] = min(transportMap[i-1, j]+ver_e, transportMap[i, j-1]+hor_e)
