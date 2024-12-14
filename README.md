@@ -1,3 +1,5 @@
+
+
 ## To Resize Image 
 With backward energy
 ```
@@ -14,12 +16,14 @@ python main.py -image image/cat.jpg -resize -numOfDelete_H 200 -numOfDelete_W 20
 ## To Enlarge Image
 Run: 
 ```
-python main.py -image image/beach.jpg -enlarge -numOfDelete_H {# of pixels you want add to height} -numOfDelete_W {# of pixels you want add to width}
+python main.py -image image/beach.jpg -enlarge -numOfDelete_H 0 -numOfDelete_W {# of pixels you want add to width}
 ```
 For example: 
 ```
 python main.py -image image/beach.jpg -enlarge -numOfDelete_H 0 -numOfDelete_W 400
 ```
+note: 
+Currently, the program only support enlarge in width, so the value after "-numOfDelete_H" must be 0. 
 ## To Remove Object
 You can use the image and the mask already in image folder. 
 For example:
