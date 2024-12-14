@@ -17,12 +17,11 @@ def update_mask(mask: np.ndarray[np.bool_], seam):
     return ret
 
 def obj_remove(img:np.ndarray, mask: np.ndarray, forward: bool):
-    f = np.array([1, -2, 1])
     while(np.isin(mask, False).any()):
         if forward:
             seam = get_forward_seam(img, mask)
         else:
-            energyMap = compute_energyMap(img, f)
+            energyMap = compute_energyMap(img)
             energyMap[mask[:, :, 0] == False] = -1e6
             seam = find_seam(energyMap)
         # show_seam(img, seam)
