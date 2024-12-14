@@ -30,6 +30,7 @@ For example:
 ```
 python main.py -image image/cat.jpg -resize -numOfDelete_H 200 -numOfDelete_W 200 
 ```
+
 ## To Enlarge Image
 Run: 
 ```
@@ -41,6 +42,7 @@ python main.py -image image/beach.jpg -enlarge -numOfDelete_H 0 -numOfDelete_W 4
 ```
 note: 
 Currently, the program only support enlarge in width, so the value after "-numOfDelete_H" must be 0. 
+
 ## To Remove Object
 You can use the image and the mask already in image folder. 
 For example:
