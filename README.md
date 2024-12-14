@@ -1,4 +1,21 @@
-
+## Requirements
+* colorama==0.4.6
+* contourpy==1.3.1
+* cycler==0.12.1
+* fonttools==4.55.3
+* kiwisolver==1.4.7
+* llvmlite==0.43.0
+* matplotlib==3.10.0
+* numba==0.60.0
+* numpy==2.0.2
+* opencv-python==4.10.0.84
+* packaging==24.2
+* pillow==11.0.0
+* pyparsing==3.2.0
+* python-dateutil==2.9.0.post0
+* scipy==1.14.1
+* six==1.17.0
+* tqdm==4.67.1
 
 ## To Resize Image 
 With backward energy
